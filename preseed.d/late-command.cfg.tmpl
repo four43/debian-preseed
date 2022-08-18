@@ -1,0 +1,15 @@
+### Late Command
+# This command is run just before the install finishes, but when there is
+# still a usable /target directory. You can chroot to /target and use it
+# directly, or use the apt-install and in-target commands to easily install
+# packages and run commands in the target system.
+d-i preseed/late_command string \
+    in-target mkdir -p /home/${DEBIAN_PS_USERNAME}/.ssh; \
+    in-target /bin/sh -c "echo '${DEBIAN_PS_PUB_KEY}' > /home/${DEBIAN_PS_USERNAME}/.ssh/authorized_keys"; \
+    in-target chown -R ${DEBIAN_PS_USERNAME}:${DEBIAN_PS_USERNAME} /home/${DEBIAN_PS_USERNAME}/.ssh/; \
+    in-target chmod 0600 /home/${DEBIAN_PS_USERNAME}/.ssh/authorized_keys; \
+    in-target sed -i "s/.*RSAAuthentication.*/RSAAuthentication yes/g" /etc/ssh/sshd_config; \
+    in-target sed -i "s/.*PubkeyAuthentication.*/PubkeyAuthentication yes/g" /etc/ssh/sshd_config; \
+    in-target sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication no/g" /etc/ssh/sshd_config; \
+    in-target sed -i "s/.*AuthorizedKeysFile.*/AuthorizedKeysFile\t\.ssh\/authorized_keys/g" /etc/ssh/sshd_config; \
+    in-target sed -i "s/.*PermitRootLogin.*/PermitRootLogin no/g" /etc/ssh/sshd_config;

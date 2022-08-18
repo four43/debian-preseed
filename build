@@ -1,0 +1,58 @@
+#!/bin/bash
+# Extracts a debian ISO, injects a preseed.cfg (using preseed.d/*.cfg files) and bundles them up again
+# A script version of https://wiki.debian.org/DebianInstaller/Preseed/EditIso
+set -e
+
+iso_file="$1"
+if [[ -z "$iso_file" ]]; then
+	echo "Pass the original debian ISO as the first argument" >&2
+	exit 1
+fi
+
+# Init temp workspace
+work_dir="$(mktemp -d debian-tmp.XXXXXX)"
+trap 'chmod +w -R "$work_dir/debian-iso"; rm -rf -- "$work_dir"' EXIT
+
+# Extract ISO
+iso_name="$(basename "$iso_file")"
+iso_dir="${work_dir}/debian-iso"
+mkdir -p "${iso_dir}"
+bsdtar -C "${iso_dir}" -xf "$iso_file"
+chmod +w -R "${iso_dir}"/install.*/
+gunzip "${iso_dir}"/install.*/initrd.gz
+
+# Create Config
+config_dir="${work_dir}/config"
+mkdir -p "${config_dir}"
+## Render templates
+cp ./preseed.d/*.cfg "${config_dir}/"
+for f in ./preseed.d/*.tmpl; do
+	config_filename="$(basename ${f})"
+	# Only substitute defined variables
+	envsubst "$(env | sed -e 's/=.*//' -e 's/^/\$/g')" < "${f}" > "${config_dir}/${config_filename%.*}"
+done
+echo "#_preseed_V1" > "${work_dir}/preseed.cfg"
+cat "${config_dir}"/*.cfg >> "${work_dir}/preseed.cfg"
+
+# This only works with a local path for some reason
+cp "${work_dir}/preseed.cfg" "preseed.cfg"
+echo "preseed.cfg" | cpio -H newc -o -A -F ${iso_dir}/install.*/initrd
+rm "preseed.cfg"
+
+# Bundle everything up again
+gzip "${iso_dir}"/install.*/initrd
+chmod -w -R "${iso_dir}"/install.*/
+
+pushd ${iso_dir}
+chmod +w md5sum.txt
+find -follow -type f ! -name md5sum.txt -print0 | xargs -0 md5sum > md5sum.txt
+chmod -w md5sum.txt
+popd
+
+chmod +w ${iso_dir}/isolinux/isolinux.bin
+chmod +w ${iso_dir}/isolinux/boot.cat
+genisoimage -r -J -b isolinux/isolinux.bin -c isolinux/boot.cat \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+	    -o preseed-${iso_name} "${iso_dir}"
+
+isohybrid preseed-${iso_name}

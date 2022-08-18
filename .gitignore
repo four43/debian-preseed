@@ -1,0 +1,3 @@
+*.iso
+vars.sh
+debian-tmp.*
