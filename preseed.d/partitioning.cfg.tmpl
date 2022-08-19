@@ -2,7 +2,7 @@
 ## Partitioning example
 # If the system has free space you can choose to only partition that space.
 # This is only honoured if partman-auto/method (below) is not set.
-d-i partman-auto/init_automatically_partition select biggest_free
+# d-i partman-auto/init_automatically_partition select biggest_free
 
 # Alternatively, you may specify a disk to partition. If the system has only
 # one disk the installer will default to using that, but otherwise the device
@@ -26,6 +26,7 @@ d-i partman-auto-lvm/guided_size string 16G
 # contains an old LVM configuration, the user will normally receive a
 # warning. This can be preseeded away...
 d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-auto/purge_lvm_from_device boolean true
 # The same applies to pre-existing software RAID array:
 d-i partman-md/device_remove_md boolean true
 # And the same goes for the confirmation to write the lvm partitions.
@@ -36,7 +37,7 @@ d-i partman-lvm/confirm_nooverwrite boolean true
 # - atomic: all files in one partition
 # - home:   separate /home partition
 # - multi:  separate /home, /var, and /tmp partitions
-# d-i partman-auto/choose_recipe select multi
+d-i partman-auto/choose_recipe select boot-root
 
 # Or provide a recipe of your own...
 # If you have a way to get a recipe file into the d-i environment, you can
@@ -45,6 +46,8 @@ d-i partman-lvm/confirm_nooverwrite boolean true
 
 # If not, you can put an entire recipe into the preconfiguration file in one
 # LVM Example help from: https://gist.github.com/diasjorge/9ac754ad9a0fdc1a62b0
+d-i partman/alignment string "optimal"
+d-i partman-auto-lvm/new_vg_name string main
 d-i partman-auto/expert_recipe string                         \
       boot-root ::                                            \
               1074 -1 1074 ext3                               \
@@ -54,21 +57,13 @@ d-i partman-auto/expert_recipe string                         \
                       use_filesystem{ } filesystem{ ext3 }    \
                       mountpoint{ /boot }                     \
               .                                               \
-              16106 -1 16106 ext4                             \
-                      $primary{ }                             \
-                      method{ lvm }                           \
-                      device{ ${DEBIAN_PS_DISK}2 }            \
-                      vg_name{ main }                         \
-              .                                               \ 
               1074 -1 1074 linux-swap                         \
                       $lvmok{ }                               \
-                      in_vg{ main }                           \
                       lv_name{ swap }                         \
                       method{ swap } format{ }                \
               .                                               \
               1074 -1 1074 ext4                               \
                       $lvmok{ }                               \
-                      in_vg{ main }                           \
                       lv_name{ home }                         \
                       method{ format } format{ }              \
                       use_filesystem{ } filesystem{ ext4 }    \
@@ -76,7 +71,6 @@ d-i partman-auto/expert_recipe string                         \
               .                                               \
               5369 -1 5369 ext4                               \
                       $lvmok{ }                               \
-                      in_vg{ main }                           \
                       lv_name{ var }                          \
                       method{ format } format{ }              \
                       use_filesystem{ } filesystem{ ext4 }    \
@@ -84,7 +78,6 @@ d-i partman-auto/expert_recipe string                         \
               .                                               \
               1074 -1 1074 ext4                               \
                       $lvmok{ }                               \
-                      in_vg{ main }                           \
                       lv_name{ tmp }                          \
                       method{ format } format{ }              \
                       use_filesystem{ } filesystem{ ext4 }    \
@@ -92,7 +85,6 @@ d-i partman-auto/expert_recipe string                         \
               .                                               \
               5369 -1 5369 ext4                               \
                       $lvmok{ }                               \
-                      in_vg{ main }                           \
                       lv_name{ root }                         \
                       method{ format } format{ }              \
                       use_filesystem{ } filesystem{ ext4 }    \

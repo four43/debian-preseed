@@ -11,7 +11,7 @@ fi
 
 # Init temp workspace
 work_dir="$(mktemp -d debian-tmp.XXXXXX)"
-trap 'chmod +w -R "$work_dir/debian-iso"; rm -rf -- "$work_dir"' EXIT
+# trap 'chmod +w -R "$work_dir/debian-iso"; rm -rf -- "$work_dir"' EXIT
 
 # Extract ISO
 iso_name="$(basename "$iso_file")"
